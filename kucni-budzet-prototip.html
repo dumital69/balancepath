@@ -327,4 +327,61 @@ window.bpTransferRowWithActions=function(x){const f=accountById(x.fromId),to=acc
 window.renderHistory=function(filter){const box=$('historyContent');if(!box)return;const rows=rowsForHistory(filter,$('historyYear')?.value||'',$('historyAccount')?.value||'');if(!rows.length){box.innerHTML=`<p class="sub">${window.bpLabel('noHistory')}</p>`;return}const groups={};rows.forEach(r=>{const key=(r.date||'').slice(0,7)||'—';(groups[key]??=[]).push(r)});box.innerHTML=Object.entries(groups).map(([m,rs])=>`<section class="history-month"><h3>${m==='—'?m:new Date(m+'-01T00:00:00').toLocaleDateString(currentLang,{year:'numeric',month:'long'})}</h3>${rs.map(r=>r.html).join('')}</section>`).join('')};
 window.openTransactionHistory=function(filter){const ys=[...new Set([...(profile.transactions||[]),...(profile.transfers||[])].map(x=>(x.date||'').slice(0,4)).filter(Boolean))].sort().reverse(),acs=profile.accounts||[];$('panelTitle').textContent=window.bpLabel('history');$('panelBody').innerHTML=`<div class="card"><button class="back" onclick="openPanel('transaction')">← ${t('transaction')}</button><h3>${window.bpLabel('history')} — ${filter==='income'?window.bpLabel('incomeList'):filter==='expense'?window.bpLabel('expenseList'):filter==='transfer'?window.bpLabel('transferList'):window.bpLabel('allTransactions')}</h3><div class="analytics-filter"><div class="field"><label>${window.bpLabel('selectYear')}</label><select id="historyYear" onchange="renderHistory('${filter}')"><option value="">${window.bpLabel('allYears')}</option>${ys.map(y=>`<option value="${y}">${y}</option>`).join('')}</select></div><div class="field"><label>${window.bpLabel('selectAccount')}</label><select id="historyAccount" onchange="renderHistory('${filter}')"><option value="">${window.bpLabel('allAccounts')}</option>${acs.map(a=>`<option value="${a.id}">${esc(a.name)} (${esc(a.currency)})</option>`).join('')}</select></div></div><div id="historyContent"></div></div>`;show('panel');renderHistory(filter)};
 })();
+
+
+/* BalancePath final transfer model: amount may be entered in either account currency. */
+(function(){
+  const label=(k)=>typeof window.bpLabel==='function'?window.bpLabel(k):(typeof t==='function'?t(k):k);
+  function pairRate(f,to){
+    if(!f||!to)return 0;
+    if(f.currency===to.currency)return 1;
+    if(f.currency==='EUR'&&to.currency==='RSD')return 117.5;
+    if(f.currency==='RSD'&&to.currency==='EUR')return 1/117.5;
+    return 0;
+  }
+  function currencies(f,to){return [...new Set([...(profile.currencies||[]),f?.currency,to?.currency].filter(Boolean))]}
+  window.updateTransferForm=function(){
+    const f=accountById($('transferFrom')?.value),to=accountById($('transferTo')?.value),cur=$('transferInputCurrency');
+    if(!f||!to)return;
+    if(f.id===to.id){const other=profile.accounts.find(a=>a.id!==f.id);if(other&&$('transferTo'))$('transferTo').value=other.id;return window.updateTransferForm()}
+    const list=currencies(f,to),old=cur?.value;
+    if(cur){cur.innerHTML=list.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');cur.value=list.includes(old)?old:(to.currency||f.currency);cur.onchange=()=>window.updateTransferForm()}
+    const r=pairRate(f,to),input=cur?.value,displayRate=input===f.currency?r:(input===to.currency&&r?1/r:0);
+    if($('transferRate')){$('transferRate').disabled=f.currency===to.currency;$('transferRate').value=displayRate?displayRate.toFixed(8):''}
+    window.updateTransferResult();
+  };
+  window.updateTransferResult=function(){
+    const f=accountById($('transferFrom')?.value),to=accountById($('transferTo')?.value),cur=$('transferInputCurrency')?.value,amount=Number($('transferSent')?.value)||0,rate=Number($('transferRate')?.value)||0;
+    let sent=0,received=0;
+    if(f&&to&&amount>0&&rate>0){
+      if(f.currency===to.currency){sent=received=amount}
+      else if(cur===f.currency){sent=amount;received=amount*rate}
+      else if(cur===to.currency){received=amount;sent=amount*rate}
+    }
+    if($('transferSendSummary'))$('transferSendSummary').textContent=`${label('sendSummary')}: ${sent?money(sent,f?.currency||''):'—'}`;
+    if($('transferReceiveSummary'))$('transferReceiveSummary').textContent=`${label('receiveSummary')}: ${received?money(received,to?.currency||''):'—'}`;
+    if($('transferRateDirection'))$('transferRateDirection').textContent=f&&to&&cur?`(1 ${cur} = ${rate||0} ${cur===f.currency?to.currency:f.currency})`:'';
+    if($('transferRateHint'))$('transferRateHint').textContent=cur?`${label('amountCurrency')}: ${cur}`:'';
+  };
+  window.loadAutomaticRate=async function(){
+    const f=accountById($('transferFrom')?.value),to=accountById($('transferTo')?.value),cur=$('transferInputCurrency')?.value;
+    if(!f||!to)return;let sourceToTarget=pairRate(f,to);
+    if(!sourceToTarget&&f.currency!==to.currency){try{const r=await fetch(`https://api.frankfurter.app/latest?from=${encodeURIComponent(f.currency)}&to=${encodeURIComponent(to.currency)}`);const d=await r.json();sourceToTarget=Number(d.rates?.[to.currency]||0)}catch(e){}}
+    const rate=cur===f.currency?sourceToTarget:(cur===to.currency&&sourceToTarget?1/sourceToTarget:sourceToTarget);
+    if(rate>0){$('transferRate').value=rate.toFixed(8);window.updateTransferResult();toast(t('rateLoaded'))}else toast(t('rateUnavailable'));
+  };
+  window.saveTransfer=function(){
+    const from=accountById($('transferFrom')?.value),to=accountById($('transferTo')?.value),cur=$('transferInputCurrency')?.value,amount=Number($('transferSent')?.value),rate=Number($('transferRate')?.value);
+    if(!from||!to||from.id===to.id||!(amount>0)||!(rate>0))return toast(t('checkTransfer'));
+    let sent,received;
+    if(from.currency===to.currency){sent=received=amount}
+    else if(cur===from.currency){sent=amount;received=amount*rate}
+    else if(cur===to.currency){received=amount;sent=amount*rate}
+    else return toast(t('checkTransfer'));
+    const data={fromId:from.id,toId:to.id,sent:+sent.toFixed(2),received:+received.toFixed(2),fromCurrency:from.currency,toCurrency:to.currency,inputCurrency:cur,rate:+rate.toFixed(8),date:$('transferDate')?.value,note:$('transferNote')?.value.trim()};
+    if(typeof bpEditingTransferId!=='undefined'&&bpEditingTransferId){const old=(profile.transfers||[]).find(x=>x.id===bpEditingTransferId);if(old)Object.assign(old,data);bpEditingTransferId=null}else profile.transfers.push({id:uid(),...data});
+    persistProfile();openPanel('accounts');refreshHomeTotals();toast(t('transferSaved'));
+  };
+  const st=document.createElement('style');st.textContent='.positive,.bar-income,.tx-amount.positive{color:#39ff88!important}.negative,.bar-expense,.tx-amount.negative{color:#ff304f!important}.bar-fill.bar-income{background:#39ff88!important}.bar-fill.bar-expense{background:#ff304f!important}.transfer-result{border:2px solid #69b7ff!important;background:rgba(25,65,105,.42)!important}';document.head.appendChild(st);
+})();
 </script></body></html>
