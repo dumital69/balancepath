@@ -656,4 +656,67 @@ window.openTransactionHistory=function(filter){const ys=[...new Set([...(profile
   const css=document.createElement('style');css.textContent=`html,body{width:100%;max-width:100%;overflow-x:hidden!important}body{overscroll-behavior-x:none}.app{max-width:560px;width:100%;overflow-x:hidden}.screen{max-width:100%;overflow-x:hidden;transform:translateZ(0)}.bp-final-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200}.bp-final-modal{position:fixed;z-index:201;left:50%;top:50%;width:min(92vw,520px);max-height:88vh;overflow:auto;transform:translate(-50%,-48%) scale(.98);opacity:0;background:#111;color:#f5f5f5;border:1px solid #666;border-radius:20px;padding:20px;box-shadow:0 25px 70px rgba(0,0,0,.5);transition:opacity .16s ease,transform .16s ease}.bp-final-modal.open{opacity:1;transform:translate(-50%,-50%) scale(1)}.bp-final-modal h2{color:#ffd429;margin-top:0}.bp-final-close{position:absolute;right:10px;top:9px;width:36px;height:36px;border:0;border-radius:50%;background:#292929;color:#fff;font-size:24px}.bp-theme-options{display:grid;gap:10px;margin:12px 0}.bp-theme-options label{display:block;padding:14px;border:1px solid #555;border-radius:12px}.bp-theme-options input{accent-color:#ffd429}.bp-final-reminder-row{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid #444;padding:12px 0}.bp-final-reminder-row small{display:block;color:#bbb;margin-top:4px}.bp-final-guide-item{border:1px solid var(--line);border-radius:12px;padding:12px;margin:8px 0;background:rgba(127,127,127,.08)}.bp-final-guide-item summary{cursor:pointer;font-weight:800;color:#ffd429}.bp-final-guide-item p{line-height:1.55}.theme-light .bp-final-modal{background:#fff;color:#172033;border-color:#b9c9dc}.theme-light .bp-final-close{background:#edf3fa;color:#172033}.theme-light .bp-final-guide-item{background:#f7faff;border-color:#c8d5e5}.theme-light .bp-theme-options label{border-color:#b9c9dc}@media(prefers-reduced-motion:reduce){.bp-final-modal{transition:none!important}}`;document.head.appendChild(css);
   applyTheme();
 })();
+</script><script>
+/* Final bug fix: restore the complete Accounts screen, make Settings actions authoritative, and keep vertical scrolling inside screens. */
+(function(){
+  const escX=v=>typeof esc==='function'?esc(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const text=k=>typeof t==='function'?t(k):k;
+  function bindClick(el,fn){if(!el)return;el.removeAttribute('onclick');el.onclick=fn;el.addEventListener('click',e=>e.stopPropagation(),{capture:false})}
+  function completeAccounts(){
+    if(typeof accountsPanel!=='function')return '';
+    const base=accountsPanel();
+    const reminder=`<div class="card bp-account-reminder-entry"><button class="btn secondary" onclick="bpOpenFinalReminders()">⏰ ${text('reminders')||'Payment reminders'}</button><p class="sub">${typeof window.bpLabel==='function'?window.bpLabel('reminderInfo'):'Reminders only notify you.'}</p></div>`;
+    return base+reminder;
+  }
+  function openAccountsFixed(){
+    if($('panelTitle'))$('panelTitle').textContent=text('accounts')||'Accounts';
+    if($('panelBody'))$('panelBody').innerHTML=completeAccounts();
+    show('panel');
+    const body=$('panelBody');if(body){body.scrollTop=0;body.style.overflowY='auto';body.style.overscrollBehaviorX='none'}
+  }
+  function openSettingsFixed(){
+    if(typeof ensureExtended==='function')ensureExtended();
+    const box=$('settings');if(!box)return;
+    show('settings');
+    const items=box.querySelectorAll('.menu-item');
+    if(items[0])bindClick(items[0],()=>{if(typeof showOnboarding==='function')showOnboarding()});
+    if(items[1])bindClick(items[1],()=>{if(typeof showOnboarding==='function')showOnboarding()});
+    if(items[2])bindClick(items[2],()=>{if(typeof chooseTheme==='function')chooseTheme();else if(typeof window.bpOpenFinalTheme==='function')window.bpOpenFinalTheme()});
+    if(items[3])bindClick(items[3],()=>window.openPanel('data'));
+    if(items[4])bindClick(items[4],()=>toast(text('fingerprintLater')||'Fingerprint login will be added in a later version'));
+    if(typeof applyTheme==='function')applyTheme();else if(typeof applyThemeV2==='function')applyThemeV2();
+    box.style.overflowY='auto';box.style.overflowX='hidden';box.style.webkitOverflowScrolling='touch';box.scrollTop=0;
+  }
+  const previousPanel=window.openPanel;
+  window.openPanel=function(type){if(type==='accounts')return openAccountsFixed();return previousPanel(type)};
+  openPanel=window.openPanel;
+  window.openSettings=openSettingsFixed;openSettings=openSettingsFixed;
+  const st=document.createElement('style');st.textContent=`
+    html,body{width:100%;max-width:100%;min-width:0;overflow-x:hidden!important}
+    body{overflow-y:auto!important;overscroll-behavior-x:none!important}
+    .app{width:100%;max-width:560px;min-width:0;box-sizing:border-box;overflow-x:hidden!important}
+    .screen{width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow-x:hidden!important}
+    .screen.active{overflow-y:auto!important;overflow-x:hidden!important;max-height:100dvh;min-height:0;-webkit-overflow-scrolling:touch}
+    #panel.active,#settings.active,#onboarding.active{overflow-y:auto!important;overflow-x:hidden!important}
+    #panelBody{max-width:100%;min-width:0;overflow-x:hidden!important;overflow-y:visible}
+    #settings{max-width:100%;min-width:0}
+    .bp-account-reminder-entry{margin-bottom:28px}
+    @supports not (height:100dvh){.screen.active{max-height:100vh}}
+    @media(max-width:600px){.screen.active{padding-bottom:32px}.panel-body,#panelBody{padding-bottom:32px}}
+  `;document.head.appendChild(st);
+})();
+</script><script>
+/* Final theme click bridge: the old chooser was private to an earlier closure. */
+(function(){
+  function openThemeDirect(){
+    const pref=profile?.theme||'dark',escT=v=>typeof esc==='function'?esc(v):String(v??'');
+    let m=$('bpFinalModal');if(!m){m=document.createElement('div');m.id='bpFinalModal';document.body.appendChild(m)}
+    const label=k=>typeof t==='function'?t(k):({dark:'Dark theme',light:'Light theme',system:'System',appearance:'Appearance',save:'Save'}[k]||k);
+    m.innerHTML=`<div class="bp-final-backdrop" onclick="bpCloseFinalModal()"></div><section class="bp-final-modal" role="dialog" aria-modal="true"><button class="bp-final-close" onclick="bpCloseFinalModal()">×</button><h2>${escT(label('appearance'))}</h2><div class="bp-theme-options"><label><input type="radio" name="bpTheme" value="system" ${pref==='system'?'checked':''}> ${escT(label('system'))}</label><label><input type="radio" name="bpTheme" value="light" ${pref==='light'?'checked':''}> ${escT(label('light'))}</label><label><input type="radio" name="bpTheme" value="dark" ${pref==='dark'?'checked':''}> ${escT(label('dark'))}</label></div><button class="btn" onclick="bpSaveFinalTheme()">${escT(label('save'))}</button></section>`;
+    requestAnimationFrame(()=>m.classList.add('open'));
+  }
+  window.bpOpenFinalTheme=openThemeDirect;
+  const oldOpenSettings=window.openSettings;
+  window.openSettings=function(){oldOpenSettings();const box=$('settings');const item=box?.querySelectorAll('.menu-item')?.[2];if(item){item.removeAttribute('onclick');item.onclick=openThemeDirect}return undefined};openSettings=window.openSettings;
+})();
 </script></body></html>
