@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -718,5 +719,25 @@ window.openTransactionHistory=function(filter){const ys=[...new Set([...(profile
   window.bpOpenFinalTheme=openThemeDirect;
   const oldOpenSettings=window.openSettings;
   window.openSettings=function(){oldOpenSettings();const box=$('settings');const item=box?.querySelectorAll('.menu-item')?.[2];if(item){item.removeAttribute('onclick');item.onclick=openThemeDirect}return undefined};openSettings=window.openSettings;
+})();
+</script><script>
+/* Final mobile polish: hide only scrollbar chrome and localize the Accounts reminder entry. */
+(function(){
+  const R={en:{title:'Payment reminders',info:'Reminders only notify you; they never create transactions automatically.'},sr:{title:'Podsetnici za uplate',info:'Podsetnici samo upozoravaju; nikada ne knjiže transakcije automatski.'},de:{title:'Zahlungserinnerungen',info:'Erinnerungen benachrichtigen nur; sie erstellen niemals automatisch Transaktionen.'},ru:{title:'Напоминания о платежах',info:'Напоминания только предупреждают; они не создают операции автоматически.'},es:{title:'Recordatorios de pagos',info:'Los recordatorios solo avisan; nunca crean transacciones automáticamente.'},fr:{title:'Rappels de paiement',info:'Les rappels avertissent seulement ; ils ne créent jamais de transactions automatiquement.'}};
+  const rt=k=>R[currentLang]?.[k]||R.en[k];
+  const escR=v=>typeof esc==='function'?esc(v):String(v??'');
+  const previous=window.openPanel;
+  function accountsLocalized(){
+    const base=typeof accountsPanel==='function'?accountsPanel():'';
+    return base+`<div class="card bp-account-reminder-entry"><button class="btn secondary" onclick="bpOpenFinalReminders()">⏰ ${escR(rt('title'))}</button><p class="sub">${escR(rt('info'))}</p></div>`;
+  }
+  window.openPanel=function(type){if(type==='accounts'){$('panelTitle').textContent=rt('title')==='Payment reminders'?(typeof t==='function'?t('accounts'):'Accounts'):(currentLang==='sr'?'Nalozi':currentLang==='de'?'Konten':currentLang==='ru'?'Счета':currentLang==='es'?'Cuentas':currentLang==='fr'?'Comptes':'Accounts');$('panelBody').innerHTML=accountsLocalized();show('panel');$('panelBody').scrollTop=0;return}return previous(type)};openPanel=window.openPanel;
+  const st=document.createElement('style');st.textContent=`
+    html,body{overflow:hidden!important;scrollbar-width:none!important;-ms-overflow-style:none!important}
+    html::-webkit-scrollbar,body::-webkit-scrollbar,.screen::-webkit-scrollbar,#panel::-webkit-scrollbar,#settings::-webkit-scrollbar,#panelBody::-webkit-scrollbar,.bp-final-modal::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}
+    .screen.active,#panel.active,#settings.active,#panelBody,.bp-final-modal{scrollbar-width:none!important;-ms-overflow-style:none!important}
+    .screen.active{overflow-y:auto!important;overflow-x:hidden!important}
+    #panelBody,#settings{overflow-y:auto!important;overflow-x:hidden!important}
+  `;document.head.appendChild(st);
 })();
 </script></body></html>
