@@ -989,4 +989,78 @@ window.openTransactionHistory=function(filter){const ys=[...new Set([...(profile
   if(typeof openSettings!=='undefined')openSettings=window.openSettings;
   hideHomeQuickActions();forceDark();
 })();
+</script><script>
+/* Active transfer summary translation: dynamic values include a suffix, so exact-key replacement is insufficient. */
+(function(){
+  const words={
+    en:{send:'You send',receive:'You receive',amount:'Amount currency'},
+    sr:{send:'Šaljete',receive:'Primate',amount:'Valuta iznosa'},
+    de:{send:'Sie senden',receive:'Sie erhalten',amount:'Währung des Betrags'},
+    ru:{send:'Вы отправляете',receive:'Вы получаете',amount:'Валюта суммы'},
+    es:{send:'Envías',receive:'Recibes',amount:'Moneda del importe'},
+    fr:{send:'Vous envoyez',receive:'Vous recevez',amount:'Devise du montant'}
+  };
+  function active(){try{return words[currentLang]||words.en}catch(_){return words.en}}
+  function fixTransferText(){
+    const root=document.getElementById('panelBody');if(!root)return;
+    const w=active();
+    const send=root.querySelector('#transferSendSummary');if(send)send.textContent=send.textContent.replace(/^\s*(?:sendSummary|You send|Šaljete|Sie senden|Вы отправляете|Envías|Vous envoyez)\s*:/i,w.send+':');
+    const receive=root.querySelector('#transferReceiveSummary');if(receive)receive.textContent=receive.textContent.replace(/^\s*(?:receiveSummary|reciveSummary|You receive|Primate|Primате|Sie erhalten|Вы получаете|Recibes|Vous recevez)\s*:/i,w.receive+':');
+    const hint=root.querySelector('#transferRateHint');if(hint)hint.textContent=hint.textContent.replace(/^\s*(?:amountCurrency|Amount currency|Valuta iznosa|Währung des Betrags|Währung iznosa|Валюта суммы|Moneda del importe|Devise du montant)\s*:/i,w.amount+':');
+    root.querySelectorAll('*').forEach(el=>{if(el.children.length===0&&el.textContent){el.textContent=el.textContent.replace(/\bsendSummary\s*:/g,w.send+':').replace(/\breciveSummary\s*:/g,w.receive+':').replace(/\breceiveSummary\s*:/g,w.receive+':').replace(/\bamountCurrency\s*:/g,w.amount+':')}});
+  }
+  const oldUpdate=window.updateTransferResult;
+  window.updateTransferResult=function(){const r=oldUpdate?.apply(this,arguments);fixTransferText();return r};
+  if(typeof updateTransferResult!=='undefined')updateTransferResult=window.updateTransferResult;
+  const oldOpen=window.openTransfer;
+  window.openTransfer=function(){const r=oldOpen?.apply(this,arguments);setTimeout(fixTransferText,0);return r};
+  if(typeof openTransfer!=='undefined')openTransfer=window.openTransfer;
+  window.bpFixTransferTranslations=fixTransferText;
+})();
+</script><script>
+/* Final UX: drawing-like orbit and stay inside transfer/transaction forms after Save. */
+(function(){
+  const labels={en:{accounts:'Accounts',home:'Home'},sr:{accounts:'Nalozi',home:'Početna'},de:{accounts:'Konten',home:'Startseite'},ru:{accounts:'Счета',home:'Главная'},es:{accounts:'Cuentas',home:'Inicio'},fr:{accounts:'Comptes',home:'Accueil'}};
+  const lang=()=>{try{return currentLang||'en'}catch(_){return 'en'}};
+  const tr=k=>labels[lang()]?.[k]||labels.en[k];
+  const q=id=>document.getElementById(id);
+  const escX=v=>typeof esc==='function'?esc(v):String(v??'');
+  function nav(kind){
+    const body=q('panelBody');if(!body)return;
+    const card=body.querySelector('.card');if(!card)return;
+    let n=body.querySelector('.bp-form-nav');
+    if(!n){n=document.createElement('div');n.className='bp-form-nav';card.insertBefore(n,card.firstChild)}
+    n.innerHTML=`<button type="button" class="back" onclick="openPanel('accounts')">← ${escX(tr('accounts'))}</button><button type="button" class="back bp-home-back" onclick="showHome()">⌂ ${escX(tr('home'))}</button>`;
+  }
+  function remember(ids){const out={};ids.forEach(id=>{const e=q(id);if(e)out[id]=e.value});return out}
+  function restore(values){Object.entries(values).forEach(([id,v])=>{const e=q(id);if(e)e.value=v});q('transferInputCurrency')&&typeof updateTransferForm==='function'&&updateTransferForm();typeof updateTransferResult==='function'&&updateTransferResult();if(q('transferFinalAmount')&&values.transferFinalAmount!==undefined)q('transferFinalAmount').value=values.transferFinalAmount}
+  const oldOpenTransfer=window.openTransfer;
+  window.openTransfer=function(){const r=oldOpenTransfer?.apply(this,arguments);setTimeout(()=>nav('transfer'),0);return r};
+  if(typeof openTransfer!=='undefined')openTransfer=window.openTransfer;
+  const oldOpenPanel=window.openPanel;
+  window.openPanel=function(type){const r=oldOpenPanel?.apply(this,arguments);if(type==='transaction'||type==='transfer')setTimeout(()=>nav(type),0);return r};
+  if(typeof openPanel!=='undefined')openPanel=window.openPanel;
+  const oldSaveTransfer=window.saveTransfer;
+  window.saveTransfer=function(){
+    const values=remember(['transferFrom','transferTo','transferInputCurrency','transferSent','transferRate','transferFinalAmount','transferDate','transferNote']);
+    const before=(profile?.transfers||[]).length;
+    const result=oldSaveTransfer?.apply(this,arguments);
+    if((profile?.transfers||[]).length>before){
+      setTimeout(()=>{window.openTransfer();setTimeout(()=>restore(values),30)},0);
+    }
+    return result;
+  };
+  if(typeof saveTransfer!=='undefined')saveTransfer=window.saveTransfer;
+  const style=document.createElement('style');style.textContent=`
+    /* Drawing: 1 top, 2/3 upper sides, 4/5 lower sides. */
+    #home .orbit .b1{left:50%;top:-1%;right:auto;bottom:auto;transform:translateX(-50%)}
+    #home .orbit .b2{left:4%;top:13%;right:auto;bottom:auto;transform:none}
+    #home .orbit .b3{right:4%;top:13%;left:auto;bottom:auto;transform:none}
+    #home .orbit .b4{left:4%;bottom:13%;right:auto;top:auto;transform:none}
+    #home .orbit .b5{right:4%;bottom:13%;left:auto;top:auto;transform:none}
+    .bp-form-nav{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:-4px 0 8px}
+    .bp-form-nav .back{margin:0;flex:1;text-align:center;border:1px solid var(--line);border-radius:10px;padding:8px 4px}
+  `;document.head.appendChild(style);
+  setTimeout(()=>{nav('transaction');nav('transfer')},0);
+})();
 </script></body></html>
