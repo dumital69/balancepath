@@ -912,4 +912,81 @@ window.openTransactionHistory=function(filter){const ys=[...new Set([...(profile
   if(typeof openSettings!=='undefined')openSettings=window.openSettings;
   const style=document.createElement('style');style.textContent=`.bp-final-modal{z-index:9999!important}.bp-final-backdrop{z-index:9998!important}.bp-final-modal select,.bp-final-modal input{color:inherit!important;background:inherit!important}`;document.head.appendChild(style);
 })();
+</script><script>
+/* Final agreed navigation: five home bubbles, all money tools under Accounts, dark theme only. */
+(function(){
+  const labels={
+    en:{accounts:'Accounts',add:'Add account',mine:'My accounts',closing:'Closing balance',transfer:'Transfer between accounts',transactions:'Transactions',analytics:'Analytics',reminders:'Payment reminders',history:'Transaction history',accountAnalytics:'Account analytics',info:'Reminders only notify you.',home:'Home',back:'Back'},
+    sr:{accounts:'Nalozi',add:'Dodaj nalog',mine:'Moji nalozi',closing:'Završno stanje',transfer:'Prenos između naloga',transactions:'Transakcije',analytics:'Analitika',reminders:'Podsetnici za uplate',history:'Istorija transakcija',accountAnalytics:'Analitika naloga',info:'Podsetnici samo upozoravaju.',home:'Početna',back:'Nazad'},
+    de:{accounts:'Konten',add:'Konto hinzufügen',mine:'Meine Konten',closing:'Endsaldo',transfer:'Überweisung zwischen Konten',transactions:'Transaktionen',analytics:'Analyse',reminders:'Zahlungserinnerungen',history:'Transaktionsverlauf',accountAnalytics:'Kontoanalyse',info:'Erinnerungen benachrichtigen nur.',home:'Startseite',back:'Zurück'},
+    ru:{accounts:'Счета',add:'Добавить счёт',mine:'Мои счета',closing:'Конечный остаток',transfer:'Перевод между счетами',transactions:'Операции',analytics:'Аналитика',reminders:'Напоминания о платежах',history:'История операций',accountAnalytics:'Аналитика счетов',info:'Напоминания только предупреждают.',home:'Главная',back:'Назад'},
+    es:{accounts:'Cuentas',add:'Añadir cuenta',mine:'Mis cuentas',closing:'Saldo final',transfer:'Transferencia entre cuentas',transactions:'Transacciones',analytics:'Análisis',reminders:'Recordatorios de pagos',history:'Historial de transacciones',accountAnalytics:'Análisis de cuentas',info:'Los recordatorios solo avisan.',home:'Inicio',back:'Volver'},
+    fr:{accounts:'Comptes',add:'Ajouter un compte',mine:'Mes comptes',closing:'Solde final',transfer:'Transfert entre comptes',transactions:'Transactions',analytics:'Analyse',reminders:'Rappels de paiement',history:'Historique des transactions',accountAnalytics:'Analyse des comptes',info:'Les rappels avertissent seulement.',home:'Accueil',back:'Retour'}
+  };
+  const lang=()=>{try{return currentLang||'en'}catch(_){return 'en'}};
+  const tr=k=>labels[lang()]?.[k]||labels.en[k]||k;
+  const escN=v=>typeof esc==='function'?esc(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const q=id=>document.getElementById(id);
+  const oldAccountsSection=window.bpAccountsSection;
+  function accountsMenuFinal(){
+    const info=tr('info');
+    return `<div class="bp-accounts-menu bp-accounts-menu-final">
+      <button class="bp-account-menu-card" onclick="bpAccountsSectionFinal('add')"><span>＋</span><b>${escN(tr('add'))}</b><small>${escN(typeof t==='function'?t('accountName'):'Account name')}</small></button>
+      <button class="bp-account-menu-card" onclick="bpAccountsSectionFinal('mine')"><span>▣</span><b>${escN(tr('mine'))}</b><small>${escN(tr('closing'))}</small></button>
+      <button class="bp-account-menu-card" onclick="bpAccountsSectionFinal('transfer')"><span>⇄</span><b>${escN(tr('transfer'))}</b><small>${escN(typeof t==='function'?t('newTransfer'):'New transfer')}</small></button>
+      <button class="bp-account-menu-card" onclick="bpAccountsSectionFinal('transactions')"><span>▤</span><b>${escN(tr('transactions'))}</b><small>${escN(tr('history'))}</small></button>
+      <button class="bp-account-menu-card" onclick="bpAccountsSectionFinal('analytics')"><span>▥</span><b>${escN(tr('analytics'))}</b><small>${escN(tr('accountAnalytics'))}</small></button>
+      <button class="bp-account-menu-card" onclick="bpAccountsSectionFinal('reminders')"><span>⏰</span><b>${escN(tr('reminders'))}</b><small>${escN(info)}</small></button>
+    </div>`;
+  }
+  window.bpAccountsSectionFinal=function(section){
+    if(section==='transfer'){if(typeof openTransfer==='function')openTransfer();return}
+    if(section==='transactions'){if(typeof openPanel==='function')openPanel('transaction');return}
+    if(section==='analytics'){if(typeof openPanel==='function')openPanel('analytics');return}
+    if(section==='reminders'){if(typeof window.bpOpenFinalReminders==='function')window.bpOpenFinalReminders();return}
+    if(typeof oldAccountsSection==='function')oldAccountsSection(section);
+  };
+  const oldOpenPanel=window.openPanel;
+  window.openPanel=function(type){
+    if(type==='accounts'){
+      if(q('panelTitle'))q('panelTitle').textContent=tr('accounts');
+      if(q('panelBody')){q('panelBody').innerHTML=accountsMenuFinal();q('panelBody').scrollTop=0}
+      if(typeof show==='function')show('panel');
+      return;
+    }
+    return oldOpenPanel(type);
+  };
+  try{openPanel=window.openPanel}catch(_){ }
+  function hideHomeQuickActions(){
+    ['transactionBtn','analyticsBtn'].forEach(id=>q(id)?.closest('.card')?.remove());
+    q('transactionBtn')?.remove();q('analyticsBtn')?.remove();
+  }
+  function forceDark(){
+    if(typeof profile!=='undefined'&&profile){profile.theme='dark';if(typeof persistProfile==='function')persistProfile()}
+    const root=document.documentElement,body=document.body;
+    root.classList.remove('theme-light','bp-light');body.classList.remove('theme-light','bp-light');root.classList.add('bp-dark');body.classList.add('bp-dark');
+    root.dataset.theme='dark';body.dataset.theme='dark';root.style.backgroundColor='#050505';body.style.backgroundColor='#050505';
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content','#050505');
+  }
+  window.setTheme=function(){forceDark();return 'dark'};
+  window.toggleTheme=function(){forceDark();return 'dark'};
+  window.applyEffectiveTheme=forceDark;
+  const style=document.createElement('style');style.textContent=`
+    /* The home screen keeps exactly the five orbit bubbles. */
+    #home .quick,#home #transactionBtn,#home #analyticsBtn{display:none!important}
+    /* Appearance is intentionally removed; the application uses one dark theme. */
+    #appearanceMenuItem,#stableAppearance,#extendedSettings,.bp-theme-final{display:none!important}
+    html,body,html.bp-dark,body.bp-dark{background:#050505!important;color:#f4f7ff!important;background-image:none!important}
+    .bp-accounts-menu-final{gap:8px!important}
+    .bp-accounts-menu-final .bp-account-menu-card{min-height:58px!important;padding:10px 12px!important}
+    .bp-accounts-menu-final .bp-account-menu-card b{font-size:14px!important}
+    .bp-accounts-menu-final .bp-account-menu-card small{font-size:10px!important}
+  `;document.head.appendChild(style);
+  const oldShowHome=window.showHome;
+  window.showHome=function(){const r=oldShowHome?.apply(this,arguments);hideHomeQuickActions();forceDark();return r};
+  const oldOpenSettings=window.openSettings;
+  window.openSettings=function(){const r=oldOpenSettings?.apply(this,arguments);q('appearanceMenuItem')?.remove();q('stableAppearance')?.remove();q('extendedSettings')?.remove();forceDark();return r};
+  if(typeof openSettings!=='undefined')openSettings=window.openSettings;
+  hideHomeQuickActions();forceDark();
+})();
 </script></body></html>
