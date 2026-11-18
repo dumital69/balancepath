@@ -1114,4 +1114,55 @@ window.openTransactionHistory=function(filter){const ys=[...new Set([...(profile
   `;document.head.appendChild(style);
   centreIcon();
 })();
+</script><script>
+/* v24 corrections: privacy as a guide tile, one navigation style, centered
+   compact account buttons, and a persistent BalancePath centre icon. */
+(function(){
+  const L={
+    en:{privacy:'Privacy policy',p:'BalancePath stores your data locally on this device in your browser. This prototype has no online server or cloud database. Data is not sent automatically. Protect your device and use JSON or CSV export for backups.'},
+    sr:{privacy:'Politika privatnosti',p:'BalancePath čuva vaše podatke lokalno na ovom uređaju, u pregledaču. Ovaj prototip nema onlajn server ni bazu podataka u oblaku. Podaci se ne šalju automatski. Zaštitite uređaj i koristite JSON ili CSV izvoz za rezervne kopije.'},
+    de:{privacy:'Datenschutzerklärung',p:'BalancePath speichert Ihre Daten lokal auf diesem Gerät im Browser. Dieser Prototyp hat keinen Online-Server und keine Cloud-Datenbank. Daten werden nicht automatisch übertragen. Schützen Sie Ihr Gerät und verwenden Sie JSON- oder CSV-Exporte für Sicherungskopien.'},
+    ru:{privacy:'Политика конфиденциальности',p:'BalancePath хранит ваши данные локально на этом устройстве в браузере. В прототипе нет онлайн-сервера и облачной базы данных. Данные не отправляются автоматически. Защитите устройство и используйте экспорт JSON или CSV для резервных копий.'},
+    es:{privacy:'Política de privacidad',p:'BalancePath guarda sus datos localmente en este dispositivo, dentro del navegador. Este prototipo no tiene servidor en línea ni base de datos en la nube. Los datos no se envían automáticamente. Proteja el dispositivo y use la exportación JSON o CSV para las copias de seguridad.'},
+    fr:{privacy:'Politique de confidentialité',p:'BalancePath stocke vos données localement sur cet appareil, dans le navigateur. Ce prototype ne possède ni serveur en ligne ni base de données cloud. Les données ne sont pas envoyées automatiquement. Protégez votre appareil et utilisez les exports JSON ou CSV pour les sauvegardes.'}
+  };
+  const lang=()=>{try{return currentLang||'en'}catch(_){return 'en'}};
+  const tr=k=>L[lang()]?.[k]||L.en[k];
+  const escX=v=>typeof esc==='function'?esc(v):String(v??'');
+  const q=id=>document.getElementById(id);
+  function privacyTile(){
+    const body=q('panelBody');if(!body)return;
+    body.querySelector('.bp-privacy-policy')?.remove();
+    const guide=body.querySelector('.bp-final-guide');
+    if(!guide||guide.querySelector('.bp-privacy-tile'))return;
+    const d=document.createElement('details');d.className='bp-final-guide-item bp-privacy-tile';
+    d.innerHTML=`<summary>${escX(tr('privacy'))}</summary><p>${escX(tr('p'))}</p>`;
+    guide.appendChild(d);
+  }
+  function removeAnalyticsTiles(){q('panelBody')?.querySelectorAll('.bp-analytics-nav').forEach(x=>x.remove())}
+  function centreIcon(){
+    const img=document.querySelector('#home .center-app-logo');
+    if(img && img.getAttribute('src')!=='logo.png')img.src='logo.png';
+  }
+  const oldPanel=window.openPanel;
+  window.openPanel=function(type){
+    const r=oldPanel?.apply(this,arguments);
+    setTimeout(()=>{if(type==='help')privacyTile();if(type==='analytics')removeAnalyticsTiles()},0);
+    return r;
+  };
+  if(typeof openPanel!=='undefined')openPanel=window.openPanel;
+  const oldHome=window.showHome;
+  window.showHome=function(){const r=oldHome?.apply(this,arguments);centreIcon();setTimeout(centreIcon,0);setTimeout(centreIcon,80);return r};
+  if(typeof showHome!=='undefined')showHome=window.showHome;
+  const oldSetLogos=window.bpSetLogos;
+  if(oldSetLogos){window.bpSetLogos=function(){const r=oldSetLogos.apply(this,arguments);centreIcon();return r};}
+  const home=q('home');
+  if(home){const mo=new MutationObserver(()=>{const img=document.querySelector('#home .center-app-logo');if(img&&img.getAttribute('src')!=='logo.png')img.src='logo.png'});mo.observe(home,{subtree:true,attributes:true,attributeFilter:['src']});}
+  const style=document.createElement('style');style.textContent=`
+    #panelBody .account-actions{justify-content:center!important;align-items:center!important}
+    #panelBody .account-actions .btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;text-align:center!important;gap:3px!important}
+    .bp-privacy-tile{display:block!important}
+  `;document.head.appendChild(style);
+  centreIcon();
+})();
 </script></body></html>
