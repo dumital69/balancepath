@@ -1063,4 +1063,16 @@ window.openTransactionHistory=function(filter){const ys=[...new Set([...(profile
   `;document.head.appendChild(style);
   setTimeout(()=>{nav('transaction');nav('transfer')},0);
 })();
+</script><script>
+/* Remove the extra navigation tiles; the original arrow/back controls remain. */
+(function(){
+  function clean(){document.querySelectorAll('.bp-form-nav').forEach(e=>e.remove())}
+  const oldOpen=window.openTransfer;
+  window.openTransfer=function(){const r=oldOpen?.apply(this,arguments);setTimeout(clean,0);return r};
+  if(typeof openTransfer!=='undefined')openTransfer=window.openTransfer;
+  const oldPanel=window.openPanel;
+  window.openPanel=function(type){const r=oldPanel?.apply(this,arguments);setTimeout(clean,0);return r};
+  if(typeof openPanel!=='undefined')openPanel=window.openPanel;
+  clean();
+})();
 </script></body></html>
