@@ -1165,4 +1165,38 @@ window.openTransactionHistory=function(filter){const ys=[...new Set([...(profile
   `;document.head.appendChild(style);
   centreIcon();
 })();
+</script><script>
+/* v25: Analytics gets one ordinary Back arrow beside the existing Home arrow. */
+(function(){
+  const labels={en:'← Back',sr:'← Nazad',de:'← Zurück',ru:'← Назад',es:'← Volver',fr:'← Retour'};
+  const q=id=>document.getElementById(id);
+  const lang=()=>{try{return currentLang||'en'}catch(_){return 'en'}};
+  function restore(){
+    const home=q('backHomeBtn'),title=q('panelTitle'),nav=q('bp-analytics-nav');
+    if(nav&&home&&title)title.parentElement.insertBefore(home,title);
+    nav?.remove();
+    q('bp-analytics-back')?.remove();
+    q('panelBody')?.querySelectorAll('.bp-analytics-nav').forEach(x=>x.remove());
+  }
+  function analyticsNav(){
+    restore();
+    const home=q('backHomeBtn'),title=q('panelTitle');if(!home||!title)return;
+    const nav=document.createElement('div');nav.id='bp-analytics-nav';nav.className='bp-analytics-header-nav';
+    const back=document.createElement('button');back.id='bp-analytics-back';back.className='back';back.type='button';back.textContent=labels[lang()]||labels.en;back.onclick=()=>openPanel('accounts');
+    nav.append(back,home);title.parentElement.insertBefore(nav,title);
+  }
+  const oldPanel=window.openPanel;
+  window.openPanel=function(type){
+    restore();
+    const r=oldPanel?.apply(this,arguments);
+    setTimeout(()=>{if(type==='analytics')analyticsNav()},0);
+    return r;
+  };
+  if(typeof openPanel!=='undefined')openPanel=window.openPanel;
+  const style=document.createElement('style');style.textContent=`
+    #bp-analytics-header-nav{display:flex;gap:8px;margin:0 0 8px}
+    #bp-analytics-nav{display:flex;gap:8px;margin:0 0 8px}
+    #bp-analytics-nav .back{flex:1;text-align:center}
+  `;document.head.appendChild(style);
+})();
 </script></body></html>
