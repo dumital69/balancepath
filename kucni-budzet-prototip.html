@@ -1075,4 +1075,43 @@ window.openTransactionHistory=function(filter){const ys=[...new Set([...(profile
   if(typeof openPanel!=='undefined')openPanel=window.openPanel;
   clean();
 })();
+</script><script>
+/* Agreed UI updates: privacy policy, compact account actions, analytics Back,
+   hide only the transfer summary block, and use the app icon in the centre. */
+(function(){
+  const L={
+    en:{back:'← Back',home:'⌂ Home',privacy:'Privacy policy',p:'BalancePath stores your data locally on this device in your browser. This prototype has no online server or cloud database. Data is not sent automatically. You are responsible for protecting your device and creating backups through JSON or CSV export. Removing browser data may permanently delete your local data.'},
+    sr:{back:'← Nazad',home:'⌂ Početna',privacy:'Politika privatnosti',p:'BalancePath čuva vaše podatke lokalno na ovom uređaju, u pregledaču. Ovaj prototip nema onlajn server ni bazu podataka u oblaku. Podaci se ne šalju automatski. Vi ste odgovorni za zaštitu uređaja i pravljenje rezervnih kopija izvozom u JSON ili CSV. Brisanje podataka pregledača može trajno obrisati lokalne podatke.'},
+    de:{back:'← Zurück',home:'⌂ Startseite',privacy:'Datenschutzerklärung',p:'BalancePath speichert Ihre Daten lokal auf diesem Gerät im Browser. Dieser Prototyp hat keinen Online-Server und keine Cloud-Datenbank. Daten werden nicht automatisch übertragen. Sie sind für den Schutz Ihres Geräts und Sicherungskopien durch JSON- oder CSV-Export verantwortlich. Das Löschen von Browserdaten kann Ihre lokalen Daten dauerhaft löschen.'},
+    ru:{back:'← Назад',home:'⌂ Главная',privacy:'Политика конфиденциальности',p:'BalancePath хранит ваши данные локально на этом устройстве в браузере. В этом прототипе нет онлайн-сервера и облачной базы данных. Данные не отправляются автоматически. Вы отвечаете за защиту устройства и резервное копирование через экспорт JSON или CSV. Удаление данных браузера может навсегда удалить локальные данные.'},
+    es:{back:'← Volver',home:'⌂ Inicio',privacy:'Política de privacidad',p:'BalancePath guarda sus datos localmente en este dispositivo, dentro del navegador. Este prototipo no tiene servidor en línea ni base de datos en la nube. Los datos no se envían automáticamente. Usted es responsable de proteger el dispositivo y crear copias de seguridad mediante la exportación JSON o CSV. Borrar los datos del navegador puede eliminar permanentemente sus datos locales.'},
+    fr:{back:'← Retour',home:'⌂ Accueil',privacy:'Politique de confidentialité',p:'BalancePath stocke vos données localement sur cet appareil, dans le navigateur. Ce prototype ne possède ni serveur en ligne ni base de données cloud. Les données ne sont pas envoyées automatiquement. Vous êtes responsable de la protection de votre appareil et des sauvegardes via un export JSON ou CSV. La suppression des données du navigateur peut effacer définitivement vos données locales.'}
+  };
+  const lang=()=>{try{return currentLang||'en'}catch(_){return 'en'}};
+  const tr=k=>L[lang()]?.[k]||L.en[k];
+  const q=id=>document.getElementById(id);
+  const escX=v=>typeof esc==='function'?esc(v):String(v??'');
+  function compactActions(){const body=q('panelBody');if(!body)return;body.querySelectorAll('.account-actions .btn').forEach(b=>{b.style.padding='3px 6px';b.style.minHeight='28px';b.style.fontSize='11px';b.style.lineHeight='1.05'})}
+  function addAnalyticsBack(){const body=q('panelBody');if(!body||body.querySelector('.bp-analytics-back'))return;const n=document.createElement('div');n.className='bp-analytics-nav';n.innerHTML=`<button type="button" class="back bp-analytics-back" onclick="openPanel('accounts')">${escX(tr('back'))}</button><button type="button" class="back" onclick="showHome()">${escX(tr('home'))}</button>`;body.insertBefore(n,body.firstChild)}
+  function addPrivacy(){const body=q('panelBody');if(!body||body.querySelector('.bp-privacy-policy'))return;const card=document.createElement('div');card.className='card bp-privacy-policy';card.innerHTML=`<h3>${escX(tr('privacy'))}</h3><p class="sub">${escX(tr('p'))}</p>`;body.appendChild(card)}
+  function centreIcon(){const img=document.querySelector('#home .center-app-logo');if(img){img.src='logo.png';img.onerror=()=>{img.src='logo-secondary.png'}}}
+  const oldPanel=window.openPanel;
+  window.openPanel=function(type){const r=oldPanel?.apply(this,arguments);setTimeout(()=>{if(type==='help')addPrivacy();if(type==='analytics')addAnalyticsBack();if(type==='accounts')compactActions();if(type==='transaction'){}},0);return r};
+  if(typeof openPanel!=='undefined')openPanel=window.openPanel;
+  const oldMine=window.bpAccountsSectionFinal;
+  if(oldMine)window.bpAccountsSectionFinal=function(section){const r=oldMine.apply(this,arguments);setTimeout(compactActions,0);return r};
+  const oldTransfer=window.openTransfer;
+  window.openTransfer=function(){const r=oldTransfer?.apply(this,arguments);setTimeout(()=>{q('panelBody')?.querySelectorAll('.transfer-result').forEach(x=>x.style.display='none')},0);return r};
+  if(typeof openTransfer!=='undefined')openTransfer=window.openTransfer;
+  const oldHome=window.showHome;
+  window.showHome=function(){const r=oldHome?.apply(this,arguments);setTimeout(centreIcon,0);return r};
+  if(typeof showHome!=='undefined')showHome=window.showHome;
+  const style=document.createElement('style');style.textContent=`
+    .bp-analytics-nav{display:flex;gap:8px;margin:0 0 10px}.bp-analytics-nav .back{flex:1;text-align:center;border:1px solid var(--line);border-radius:10px;padding:8px 5px}
+    #panelBody .account-actions .btn{padding:3px 6px!important;min-height:28px!important;font-size:11px!important;line-height:1.05!important;border-radius:7px!important}
+    #panelBody .transfer-result{display:none!important}
+    .bp-privacy-policy{margin-top:12px}.bp-privacy-policy p{line-height:1.55}
+  `;document.head.appendChild(style);
+  centreIcon();
+})();
 </script></body></html>
