@@ -1316,7 +1316,7 @@ window.openTransactionHistory=function(filter){const ys=[...new Set([...(profile
   window.openPanel=function(type){const r=oldPanel?.apply(this,arguments);setTimeout(()=>{if(type==='categories')polishCategories();if(type==='help')addIconGuide()},0);return r};
   if(typeof openPanel!=='undefined')openPanel=window.openPanel;
   function addIconGuide(){const guide=q('panelBody')?.querySelector('.bp-final-guide');if(!guide||guide.querySelector('.bp-icon-guide'))return;const d=document.createElement('details');d.className='bp-final-guide-item bp-icon-guide';d.innerHTML=`<summary>✏️ 🗑️ 👁️</summary><p>${escX(tr('icons'))}</p>`;guide.appendChild(d)}
-  function delayedOrbit(e){const b=e.target.closest?.('#home .bubble');if(!b)return;e.preventDefault();e.stopImmediatePropagation();b.classList.remove('bp-clicked');void b.offsetWidth;b.classList.add('bp-clicked');const action=b.classList.contains('b1')?()=>openPanel('accounts'):b.classList.contains('b2')?()=>openPanel('categories'):b.classList.contains('b3')?()=>openPanel('data'):b.classList.contains('b4')?()=>openPanel('help'):()=>openSettings();setTimeout(()=>{b.classList.remove('bp-clicked');action()},520)}
+  function delayedOrbit(e){const b=e.target.closest?.('#home .bubble');if(!b)return;e.preventDefault();e.stopImmediatePropagation();b.classList.remove('bp-clicked');void b.offsetWidth;b.classList.add('bp-clicked');const action=b.classList.contains('b1')?()=>openPanel('accounts'):b.classList.contains('b2')?()=>openPanel('categories'):b.classList.contains('b3')?()=>openPanel('data'):b.classList.contains('b4')?()=>openPanel('help'):()=>openSettings();setTimeout(()=>{b.classList.remove('bp-clicked');action()},300)}
   document.addEventListener('click',delayedOrbit,true);
   const style=document.createElement('style');style.textContent=`
     #home .bubble{will-change:transform,filter,box-shadow}
@@ -1332,4 +1332,12 @@ window.openTransactionHistory=function(filter){const ys=[...new Set([...(profile
     .bp-account-actions{grid-template-columns:repeat(3,1fr)!important;gap:8px!important}.bp-account-actions .btn{background:linear-gradient(135deg,#1b61b4,#714bd6)!important;border:1px solid #6e9fe8!important;color:#fff!important;box-shadow:0 5px 14px rgba(44,103,201,.28)!important;font-size:11px!important;padding:10px 5px!important}
   `;document.head.appendChild(style);
 })();
-</script></body></html>
+</script><style id="bp-subtle-orbit-style">
+/* Subtle orbit feedback: a restrained press, not a bright pulse. */
+#home .bubble.bp-clicked{animation:bpOrbitSubtle .28s ease-out!important;filter:brightness(1.14)!important;box-shadow:0 0 0 2px rgba(255,212,41,.55),0 8px 25px rgba(0,0,0,.3)!important}
+#home .b1.bp-clicked,#home .b2.bp-clicked,#home .b3.bp-clicked,#home .b5.bp-clicked{transform:scale(1.04)!important}
+#home .b4.bp-clicked{transform:translateX(-50%) scale(1.04)!important}
+@keyframes bpOrbitSubtle{0%{filter:brightness(1);box-shadow:0 0 0 0 rgba(255,212,41,0);transform:scale(1)}50%{filter:brightness(1.14);box-shadow:0 0 0 2px rgba(255,212,41,.55),0 8px 25px rgba(0,0,0,.3);transform:scale(1.04)}100%{filter:brightness(1.08);box-shadow:0 0 0 1px rgba(255,212,41,.3),0 8px 25px rgba(0,0,0,.3);transform:scale(1)}}
+#home .b4.bp-clicked{animation-name:bpOrbitSubtleCenter}
+@keyframes bpOrbitSubtleCenter{0%{filter:brightness(1);transform:translateX(-50%) scale(1)}50%{filter:brightness(1.14);transform:translateX(-50%) scale(1.04)}100%{filter:brightness(1.08);transform:translateX(-50%) scale(1)}}
+</style></body></html>
