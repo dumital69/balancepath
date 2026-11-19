@@ -1272,4 +1272,64 @@ window.openTransactionHistory=function(filter){const ys=[...new Set([...(profile
   function refreshAdjustedClosing(){const id=window.bpCurrentAccountId;if(!id||typeof accountById!=='function')return;const a=accountById(id);if(!a)return;const v=typeof accountBalance==='function'?accountBalance(a):0;const b=document.querySelector('.account-month-summary .closing b');if(b&&typeof money==='function')b.textContent=money(v,a.currency);const e=document.querySelector('.bp-chart-axis span:last-child');if(e&&typeof money==='function')e.textContent=(typeof tx==='function'?tx('end'):'End')+': '+money(v,a.currency)}
   const old=window.openAccountMonthly;window.openAccountMonthly=function(id){window.bpCurrentAccountId=id;const r=old?.apply(this,arguments);setTimeout(refreshAdjustedClosing,20);return r};try{openAccountMonthly=window.openAccountMonthly}catch(_){}
 })();
+</script><script>
+/* v27 visual polish: visible orbit animation, icon-only category actions,
+   hidden-category drawer, and styled account detail actions. */
+(function(){
+  const q=id=>document.getElementById(id);
+  const lang=()=>{try{return currentLang||'en'}catch(_){return 'en'}};
+  const D={
+    en:{hidden:'Hidden categories',show:'Show hidden categories',hide:'Hide hidden categories',edit:'Edit category',delete:'Delete category',hideAction:'Hide category',restore:'Restore category',icons:'In Categories, the pencil edits. The bin deletes. The eye hides or restores a category. Hidden categories can be opened from the Hidden categories tile.'},
+    sr:{hidden:'Skrivene kategorije',show:'Prikaži skrivene kategorije',hide:'Sakrij skrivene kategorije',edit:'Izmeni kategoriju',delete:'Obriši kategoriju',hideAction:'Sakrij kategoriju',restore:'Vrati kategoriju',icons:'U Kategorijama olovka služi za izmene, kanta za brisanje, a oko za sakrivanje ili vraćanje kategorije. Skrivene kategorije otvaraju se preko pločice Skrivene kategorije.'},
+    de:{hidden:'Ausgeblendete Kategorien',show:'Ausgeblendete Kategorien anzeigen',hide:'Ausgeblendete Kategorien schließen',edit:'Kategorie bearbeiten',delete:'Kategorie löschen',hideAction:'Kategorie ausblenden',restore:'Kategorie wiederherstellen',icons:'In Kategorien bearbeitet der Bleistift, der Papierkorb löscht und das Auge blendet eine Kategorie aus oder ein. Ausgeblendete Kategorien öffnen Sie über die Kachel Ausgeblendete Kategorien.'},
+    ru:{hidden:'Скрытые категории',show:'Показать скрытые категории',hide:'Скрыть скрытые категории',edit:'Изменить категорию',delete:'Удалить категорию',hideAction:'Скрыть категорию',restore:'Восстановить категорию',icons:'В разделе категорий карандаш изменяет, корзина удаляет, а глаз скрывает или восстанавливает категорию. Скрытые категории открываются через плитку «Скрытые категории». '},
+    es:{hidden:'Categorías ocultas',show:'Mostrar categorías ocultas',hide:'Ocultar categorías ocultas',edit:'Editar categoría',delete:'Eliminar categoría',hideAction:'Ocultar categoría',restore:'Restaurar categoría',icons:'En Categorías, el lápiz edita, la papelera elimina y el ojo oculta o restaura una categoría. Las categorías ocultas se abren desde la tarjeta Categorías ocultas.'},
+    fr:{hidden:'Catégories masquées',show:'Afficher les catégories masquées',hide:'Masquer les catégories masquées',edit:'Modifier la catégorie',delete:'Supprimer la catégorie',hideAction:'Masquer la catégorie',restore:'Restaurer la catégorie',icons:'Dans Catégories, le crayon modifie, la corbeille supprime et l’œil masque ou restaure une catégorie. Les catégories masquées s’ouvrent avec la tuile Catégories masquées.'}
+  };
+  const tr=k=>D[lang()]?.[k]||D.en[k];
+  const escX=v=>typeof esc==='function'?esc(v):String(v??'');
+  function iconOnly(root){
+    root.querySelectorAll('.cat-actions button').forEach(b=>{
+      const raw=b.textContent.trim(), onclick=b.getAttribute('onclick')||'';
+      if(/edit(Category|Subcategory)/.test(onclick)){b.textContent='✏️';b.title=tr('edit')}
+      else if(/delete(Category|Subcategory)/.test(onclick)||b.classList.contains('bp-delete-cat')||b.classList.contains('bp-delete-sub')){b.textContent='🗑️';b.title=tr('delete')}
+      else if(/toggleArchive/.test(onclick)){const archived=b.closest('.cat-group,.cat-child')?.classList.contains('cat-archived');b.textContent=archived?'↩️':'👁️';b.title=archived?tr('restore'):tr('hideAction')}
+      else if(/🗑️/.test(raw)){b.textContent='🗑️';b.title=tr('delete')}
+      b.setAttribute('aria-label',b.title||raw);
+    });
+  }
+  function hiddenDrawer(){
+    const body=q('panelBody');if(!body)return;
+    body.querySelector('.bp-hidden-categories-card')?.remove();
+    const archived=[...body.querySelectorAll('.cat-group.cat-archived')];
+    const hiddenChildren=[...body.querySelectorAll('.cat-child.cat-archived')];
+    archived.forEach(x=>x.style.display='none');hiddenChildren.forEach(x=>x.style.display='none');
+    if(!archived.length&&!hiddenChildren.length)return;
+    const card=document.createElement('div');card.className='card bp-hidden-categories-card';
+    const entries=[];
+    archived.forEach(g=>{const head=g.querySelector('.cat-head'),name=head?.querySelector('b')?.textContent||'';const id=head?.querySelector('[id^="arrow-"]')?.id?.slice(6);if(id)entries.push(`<div class="bp-hidden-entry"><span>🏷️ ${escX(name)}</span><span><button type="button" title="${escX(tr('restore'))}" onclick="toggleArchiveCategory('${id}')">↩️</button><button type="button" title="${escX(tr('edit'))}" onclick="editCategory('${id}')">✏️</button><button type="button" title="${escX(tr('delete'))}" onclick="bpDeleteCategory('${id}')">🗑️</button></span></div>`)});
+    hiddenChildren.forEach(ch=>{const edit=ch.querySelector('button[onclick*="editSubcategory"]'),m=(edit?.getAttribute('onclick')||'').match(/editSubcategory\('([^']+)','([^']+)'\)/),name=ch.querySelector('span')?.textContent?.replace(/^•\s*/,'')||'';if(m)entries.push(`<div class="bp-hidden-entry"><span>↳ ${escX(name)}</span><span><button type="button" title="${escX(tr('restore'))}" onclick="toggleArchiveSubcategory('${m[1]}','${m[2]}')">↩️</button><button type="button" title="${escX(tr('edit'))}" onclick="editSubcategory('${m[1]}','${m[2]}')">✏️</button><button type="button" title="${escX(tr('delete'))}" onclick="bpDeleteSubcategory('${m[1]}','${m[2]}')">🗑️</button></span></div>`)});
+    card.innerHTML=`<button type="button" class="bp-hidden-toggle">🗂️ ${escX(tr('show'))}</button><div class="bp-hidden-list">${entries.join('')}</div>`;body.appendChild(card);const list=card.querySelector('.bp-hidden-list');list.hidden=true;card.querySelector('.bp-hidden-toggle').onclick=()=>{list.hidden=!list.hidden;card.querySelector('.bp-hidden-toggle').textContent=(list.hidden?'🗂️ '+tr('show'):'🗂️ '+tr('hide'))};
+  }
+  function polishCategories(){const body=q('panelBody');if(!body)return;iconOnly(body);hiddenDrawer()}
+  const oldPanel=window.openPanel;
+  window.openPanel=function(type){const r=oldPanel?.apply(this,arguments);setTimeout(()=>{if(type==='categories')polishCategories();if(type==='help')addIconGuide()},0);return r};
+  if(typeof openPanel!=='undefined')openPanel=window.openPanel;
+  function addIconGuide(){const guide=q('panelBody')?.querySelector('.bp-final-guide');if(!guide||guide.querySelector('.bp-icon-guide'))return;const d=document.createElement('details');d.className='bp-final-guide-item bp-icon-guide';d.innerHTML=`<summary>✏️ 🗑️ 👁️</summary><p>${escX(tr('icons'))}</p>`;guide.appendChild(d)}
+  function delayedOrbit(e){const b=e.target.closest?.('#home .bubble');if(!b)return;e.preventDefault();e.stopImmediatePropagation();b.classList.remove('bp-clicked');void b.offsetWidth;b.classList.add('bp-clicked');const action=b.classList.contains('b1')?()=>openPanel('accounts'):b.classList.contains('b2')?()=>openPanel('categories'):b.classList.contains('b3')?()=>openPanel('data'):b.classList.contains('b4')?()=>openPanel('help'):()=>openSettings();setTimeout(()=>{b.classList.remove('bp-clicked');action()},520)}
+  document.addEventListener('click',delayedOrbit,true);
+  const style=document.createElement('style');style.textContent=`
+    #home .bubble{will-change:transform,filter,box-shadow}
+    #home .bubble.bp-clicked{animation:bpOrbitPulse .52s cubic-bezier(.2,.8,.2,1)!important;filter:brightness(2)!important;box-shadow:0 0 0 6px rgba(255,212,41,.35),0 0 42px 14px rgba(255,212,41,.95),0 0 70px rgba(79,140,255,.75)!important;z-index:20!important}
+    @keyframes bpOrbitPulse{0%{transform:scale(1)}25%{transform:scale(1.22)}55%{transform:scale(1.08)}100%{transform:scale(1)}}
+    #home .b1.bp-clicked,#home .b2.bp-clicked,#home .b3.bp-clicked,#home .b5.bp-clicked{transform:scale(1.22)!important}
+    #home .b4.bp-clicked{transform:translateX(-50%) scale(1.22)!important}
+    .cat-actions button{min-width:30px!important;min-height:28px!important;border-radius:7px!important}
+    .bp-hidden-categories-card{margin-top:12px!important;border-color:#ffd429!important;background:linear-gradient(145deg,rgba(70,55,13,.9),rgba(24,24,17,.96))!important}
+    .bp-hidden-toggle{width:100%;border:0;background:none;color:#ffd429;font-weight:800;padding:10px;text-align:left;font-size:14px}
+    .bp-hidden-list{border-top:1px solid rgba(255,212,41,.3);padding-top:5px}
+    .bp-hidden-entry{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.1);font-size:13px}.bp-hidden-entry span:last-child{display:flex;gap:4px}.bp-hidden-entry button{border:0;background:none;color:#ffd429;font-size:16px;padding:3px}
+    .bp-account-actions{grid-template-columns:repeat(3,1fr)!important;gap:8px!important}.bp-account-actions .btn{background:linear-gradient(135deg,#1b61b4,#714bd6)!important;border:1px solid #6e9fe8!important;color:#fff!important;box-shadow:0 5px 14px rgba(44,103,201,.28)!important;font-size:11px!important;padding:10px 5px!important}
+  `;document.head.appendChild(style);
+})();
 </script></body></html>
