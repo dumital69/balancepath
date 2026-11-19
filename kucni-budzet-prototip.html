@@ -1199,4 +1199,77 @@ window.openTransactionHistory=function(filter){const ys=[...new Set([...(profile
     #bp-analytics-nav .back{flex:1;text-align:center}
   `;document.head.appendChild(style);
 })();
+</script><script>
+/* v26 agreed finance and UX updates. */
+(function(){
+  const q=id=>document.getElementById(id);
+  const lang=()=>{try{return currentLang||'en'}catch(_){return 'en'}};
+  const T={
+    en:{del:'Delete',confirm:'Delete this category? Existing transactions will be kept.',tx:'New transaction',transfer:'Transfer between accounts',correct:'Adjust closing balance',actual:'Enter the actual balance',reason:'Reason / note',saved:'Balance adjusted'},
+    sr:{del:'Obriši',confirm:'Obrisati ovu kategoriju? Postojeće transakcije će biti sačuvane.',tx:'Nova transakcija',transfer:'Prenos između naloga',correct:'Korekcija završnog stanja',actual:'Unesite stvarno stanje',reason:'Razlog / beleška',saved:'Stanje je korigovano'},
+    de:{del:'Löschen',confirm:'Kategorie löschen? Bestehende Transaktionen bleiben erhalten.',tx:'Neue Transaktion',transfer:'Überweisung zwischen Konten',correct:'Endsaldo korrigieren',actual:'Tatsächlichen Saldo eingeben',reason:'Grund / Notiz',saved:'Saldo korrigiert'},
+    ru:{del:'Удалить',confirm:'Удалить категорию? Существующие операции будут сохранены.',tx:'Новая операция',transfer:'Перевод между счетами',correct:'Исправить конечный остаток',actual:'Введите фактический остаток',reason:'Причина / заметка',saved:'Остаток исправлен'},
+    es:{del:'Eliminar',confirm:'¿Eliminar la categoría? Las transacciones existentes se conservarán.',tx:'Nueva transacción',transfer:'Transferencia entre cuentas',correct:'Ajustar saldo final',actual:'Introduzca el saldo real',reason:'Motivo / nota',saved:'Saldo ajustado'},
+    fr:{del:'Supprimer',confirm:'Supprimer cette catégorie ? Les transactions existantes seront conservées.',tx:'Nouvelle transaction',transfer:'Transfert entre comptes',correct:'Corriger le solde final',actual:'Saisissez le solde réel',reason:'Motif / note',saved:'Solde corrigé'}
+  };
+  const tr=k=>T[lang()]?.[k]||T.en[k];
+  const escX=v=>typeof esc==='function'?esc(v):String(v??'');
+  function deleteCategory(id){const c=(profile.categories||[]).find(x=>x.id===id);if(!c||!confirm(tr('confirm')))return;profile.categories=profile.categories.filter(x=>x.id!==id);persistProfile();openPanel('categories')}
+  function deleteSubcategory(cid,sid){const c=(profile.categories||[]).find(x=>x.id===cid);if(!c||!confirm(tr('confirm')))return;c.children=(c.children||[]).filter(x=>x.id!==sid);persistProfile();openPanel('categories')}
+  window.bpDeleteCategory=deleteCategory;window.bpDeleteSubcategory=deleteSubcategory;
+  function addCategoryDeleteButtons(){
+    const body=q('panelBody');if(!body)return;
+    body.querySelectorAll('.cat-group').forEach(group=>{const head=group.querySelector('.cat-head'),actions=head?.querySelector('.cat-actions'),id=head?.querySelector('[id^="arrow-"]')?.id?.slice(6);if(actions&&id&&!actions.querySelector('.bp-delete-cat')){const b=document.createElement('button');b.className='bp-delete-cat';b.textContent='🗑️ '+tr('del');b.onclick=e=>{e.stopPropagation();deleteCategory(id)};actions.appendChild(b)}});
+    body.querySelectorAll('.cat-child').forEach(child=>{const actions=child.querySelector('.cat-actions'),edit=actions?.querySelector('button');if(actions&&!actions.querySelector('.bp-delete-sub')){const onclick=edit?.getAttribute('onclick')||'';const m=onclick.match(/editSubcategory\('([^']+)','([^']+)'\)/);if(m){const b=document.createElement('button');b.className='bp-delete-sub';b.textContent='🗑️';b.title=tr('del');b.onclick=e=>{e.stopPropagation();deleteSubcategory(m[1],m[2])};actions.appendChild(b)}}});
+  }
+  const oldPanel=window.openPanel;
+  window.openPanel=function(type){const r=oldPanel?.apply(this,arguments);setTimeout(()=>{if(type==='categories')addCategoryDeleteButtons();if(type==='transaction')resetTransactionForm()},0);return r};
+  if(typeof openPanel!=='undefined')openPanel=window.openPanel;
+  function resetTransactionForm(){
+    const body=q('panelBody');if(!body)return;
+    const amount=q('txAmount'),desc=q('txDescription'),date=q('txDate');
+    if(amount)amount.value='';if(desc)desc.value='';if(date)date.value=typeof localDateKey==='function'?localDateKey():new Date().toISOString().slice(0,10);
+    if(q('txAccount'))q('txAccount').selectedIndex=-1;
+    if(q('txKind'))q('txKind').value='expense';
+    if(typeof renderTxCats==='function')renderTxCats();
+    if(q('txCurrency')&&q('txCurrency').options.length)q('txCurrency').selectedIndex=0;
+  }
+  function saveTransactionFresh(){
+    if(typeof ensureExtended==='function')ensureExtended();
+    const accountId=q('txAccount')?.value,kind=q('txKind')?.value||'expense',amount=Number(q('txAmount')?.value),currency=q('txCurrency')?.value,parent=q('txCategory')?.value,sub=q('txSubcategory')?.value||'';
+    if(!accountId||!(amount>0)||!parent){if(typeof toast==='function')toast(typeof t==='function'?t('invalid'):'Please complete the required fields.');return}
+    profile.transactions.push({id:typeof uid==='function'?uid():String(Date.now()),kind,accountId,amount:+amount.toFixed(2),currency,category:parent,subcategory:sub,description:q('txDescription')?.value.trim()||'',date:q('txDate')?.value||new Date().toISOString().slice(0,10)});
+    persistProfile();openPanel('transaction');if(typeof toast==='function')toast(typeof t==='function'?t('saved'):'Saved');
+  }
+  window.saveTransaction=saveTransactionFresh;try{saveTransaction=saveTransactionFresh}catch(_){ }
+  function addAccountActions(id){
+    const detail=q('panelBody')?.querySelector('.account-detail');if(!detail||detail.querySelector('.bp-account-actions'))return;
+    const box=document.createElement('div');box.className='bp-account-actions';box.innerHTML=`<button class="btn secondary" type="button">＋ ${escX(tr('tx'))}</button><button class="btn secondary" type="button">⇄ ${escX(tr('transfer'))}</button><button class="btn secondary" type="button">✎ ${escX(tr('correct'))}</button>`;
+    const sum=detail.querySelector('.account-month-summary');if(sum)sum.insertAdjacentElement('afterend',box);else detail.appendChild(box);
+    box.children[0].onclick=()=>{openPanel('transaction');setTimeout(()=>{if(q('txAccount')){q('txAccount').value=id;if(typeof syncTxCurrency==='function')syncTxCurrency()}},0)};
+    box.children[1].onclick=()=>{if(typeof openTransfer==='function')openTransfer();setTimeout(()=>{if(q('transferFrom')){q('transferFrom').value=id;if(typeof updateTransferForm==='function')updateTransferForm()}},0)};
+    box.children[2].onclick=()=>adjustBalance(id);
+  }
+  function adjustBalance(id){
+    const a=accountById(id);if(!a)return;const current=Number(typeof accountBalance==='function'?accountBalance(a):0),raw=prompt(tr('actual'),String(current));if(raw===null)return;const target=Number(String(raw).replace(',','.'));if(!Number.isFinite(target)){if(typeof toast==='function')toast(typeof t==='function'?t('invalid'):'Invalid amount');return}const note=prompt(tr('reason'),'');a.balanceAdjustment={amount:+(target-current).toFixed(2),reason:note||'',date:typeof localDateKey==='function'?localDateKey():new Date().toISOString().slice(0,10)};persistProfile();if(typeof toast==='function')toast(tr('saved'));window.openAccountMonthly(id)}
+  const oldBalance=window.accountBalance;
+  window.accountBalance=function(a){const base=oldBalance?oldBalance(a):0;return base+Number(a?.balanceAdjustment?.amount||0)};try{accountBalance=window.accountBalance}catch(_){ }
+  const oldOpenMonthly=window.openAccountMonthly;
+  window.openAccountMonthly=function(id){const r=oldOpenMonthly?.apply(this,arguments);setTimeout(()=>addAccountActions(id),0);return r};
+  if(typeof openAccountMonthly!=='undefined')openAccountMonthly=window.openAccountMonthly;
+  document.addEventListener('click',e=>{const b=e.target.closest?.('#home .bubble');if(!b)return;b.classList.remove('bp-clicked');void b.offsetWidth;b.classList.add('bp-clicked');setTimeout(()=>b.classList.remove('bp-clicked'),450)},true);
+  const style=document.createElement('style');style.textContent=`
+    .cat-actions .bp-delete-cat,.cat-actions .bp-delete-sub{color:var(--red)!important}
+    .bp-account-actions{display:grid;grid-template-columns:1fr;gap:7px;margin-top:10px}
+    .bp-account-actions .btn{margin:0!important;padding:9px 10px!important}
+    #home .bubble{transition:transform .14s ease,box-shadow .14s ease,filter .14s ease}
+    #home .bubble.bp-clicked{filter:brightness(1.7);box-shadow:0 0 0 4px rgba(255,212,41,.25),0 0 32px rgba(255,212,41,.95),0 8px 25px rgba(0,0,0,.3);z-index:4}
+    #home .bubble.bp-clicked span,#home .bubble.bp-clicked em{filter:brightness(1.2)}
+  `;document.head.appendChild(style);
+})();
+</script><script>
+(function(){
+  function refreshAdjustedClosing(){const id=window.bpCurrentAccountId;if(!id||typeof accountById!=='function')return;const a=accountById(id);if(!a)return;const v=typeof accountBalance==='function'?accountBalance(a):0;const b=document.querySelector('.account-month-summary .closing b');if(b&&typeof money==='function')b.textContent=money(v,a.currency);const e=document.querySelector('.bp-chart-axis span:last-child');if(e&&typeof money==='function')e.textContent=(typeof tx==='function'?tx('end'):'End')+': '+money(v,a.currency)}
+  const old=window.openAccountMonthly;window.openAccountMonthly=function(id){window.bpCurrentAccountId=id;const r=old?.apply(this,arguments);setTimeout(refreshAdjustedClosing,20);return r};try{openAccountMonthly=window.openAccountMonthly}catch(_){}
+})();
 </script></body></html>
