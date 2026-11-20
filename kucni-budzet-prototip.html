@@ -1229,7 +1229,7 @@ window.openTransactionHistory=function(filter){const ys=[...new Set([...(profile
     const body=q('panelBody');if(!body)return;
     const amount=q('txAmount'),desc=q('txDescription'),date=q('txDate');
     if(amount)amount.value='';if(desc)desc.value='';if(date)date.value=typeof localDateKey==='function'?localDateKey():new Date().toISOString().slice(0,10);
-    if(q('txAccount'))q('txAccount').selectedIndex=-1;
+    if(q('txAccount'))q('txAccount').selectedIndex=q('txAccount').options.length?0:-1;
     if(q('txKind'))q('txKind').value='expense';
     if(typeof renderTxCats==='function')renderTxCats();
     if(q('txCurrency')&&q('txCurrency').options.length)q('txCurrency').selectedIndex=0;
@@ -1316,7 +1316,7 @@ window.openTransactionHistory=function(filter){const ys=[...new Set([...(profile
   window.openPanel=function(type){const r=oldPanel?.apply(this,arguments);setTimeout(()=>{if(type==='categories')polishCategories();if(type==='help')addIconGuide()},0);return r};
   if(typeof openPanel!=='undefined')openPanel=window.openPanel;
   function addIconGuide(){const guide=q('panelBody')?.querySelector('.bp-final-guide');if(!guide||guide.querySelector('.bp-icon-guide'))return;const d=document.createElement('details');d.className='bp-final-guide-item bp-icon-guide';d.innerHTML=`<summary>✏️ 🗑️ 👁️</summary><p>${escX(tr('icons'))}</p>`;guide.appendChild(d)}
-  function delayedOrbit(e){const b=e.target.closest?.('#home .bubble');if(!b)return;e.preventDefault();e.stopImmediatePropagation();b.classList.remove('bp-clicked');void b.offsetWidth;b.classList.add('bp-clicked');const action=b.classList.contains('b1')?()=>openPanel('accounts'):b.classList.contains('b2')?()=>openPanel('categories'):b.classList.contains('b3')?()=>openPanel('data'):b.classList.contains('b4')?()=>openPanel('help'):()=>openSettings();setTimeout(()=>{b.classList.remove('bp-clicked');action()},300)}
+  function delayedOrbit(e){const b=e.target.closest?.('#home .bubble');if(!b)return;e.preventDefault();e.stopImmediatePropagation();b.classList.remove('bp-clicked');void b.offsetWidth;b.classList.add('bp-clicked');const action=b.classList.contains('b1')?()=>openPanel('accounts'):b.classList.contains('b2')?()=>openPanel('categories'):b.classList.contains('b3')?()=>openPanel('data'):b.classList.contains('b4')?()=>openPanel('help'):()=>openSettings();setTimeout(()=>{b.classList.remove('bp-clicked');action()},140)}
   document.addEventListener('click',delayedOrbit,true);
   const style=document.createElement('style');style.textContent=`
     #home .bubble{will-change:transform,filter,box-shadow}
@@ -1340,4 +1340,30 @@ window.openTransactionHistory=function(filter){const ys=[...new Set([...(profile
 @keyframes bpOrbitSubtle{0%{filter:brightness(1);box-shadow:0 0 0 0 rgba(255,212,41,0);transform:scale(1)}50%{filter:brightness(1.14);box-shadow:0 0 0 2px rgba(255,212,41,.55),0 8px 25px rgba(0,0,0,.3);transform:scale(1.04)}100%{filter:brightness(1.08);box-shadow:0 0 0 1px rgba(255,212,41,.3),0 8px 25px rgba(0,0,0,.3);transform:scale(1)}}
 #home .b4.bp-clicked{animation-name:bpOrbitSubtleCenter}
 @keyframes bpOrbitSubtleCenter{0%{filter:brightness(1);transform:translateX(-50%) scale(1)}50%{filter:brightness(1.14);transform:translateX(-50%) scale(1.04)}100%{filter:brightness(1.08);transform:translateX(-50%) scale(1)}}
-</style></body></html>
+</style><script>
+/* v29: robust transaction save and no-movement orbit press feedback. */
+(function(){
+  const q=id=>document.getElementById(id);
+  function saveTransactionRobust(){
+    if(typeof ensureExtended==='function')ensureExtended();
+    const account=q('txAccount'),kindEl=q('txKind'),cat=q('txCategory'),cur=q('txCurrency'),amountEl=q('txAmount');
+    const accountId=account?.value||(account?.options?.length===1?account.options[0].value:'');
+    const kind=kindEl?.value||'expense';
+    const amount=Number(String(amountEl?.value||'').replace(',','.'));
+    const parent=cat?.value||(cat?.options?.length?cat.options[0].value:'');
+    const currency=cur?.value||(cur?.options?.length?cur.options[0].value:'');
+    if(!accountId||!(amount>0)||!parent||!currency){if(typeof toast==='function')toast(typeof t==='function'?t('invalid'):'Please complete the required fields.');return false}
+    const item={id:typeof uid==='function'?uid():String(Date.now()),kind,accountId,amount:+amount.toFixed(2),currency,category:parent,subcategory:q('txSubcategory')?.value||'',description:q('txDescription')?.value.trim()||'',date:q('txDate')?.value||(typeof localDateKey==='function'?localDateKey():new Date().toISOString().slice(0,10))};
+    profile.transactions=profile.transactions||[];profile.transactions.push(item);persistProfile();
+    if(typeof openPanel==='function')openPanel('transaction');
+    if(typeof toast==='function')toast(typeof t==='function'?t('saved'):'Saved');
+    return true;
+  }
+  window.saveTransaction=saveTransactionRobust;try{saveTransaction=saveTransactionRobust}catch(_){ }
+  const style=document.createElement('style');style.id='bp-no-movement-orbit';style.textContent=`
+    #home .bubble.bp-clicked{animation:none!important;transform:none!important;filter:brightness(1.12)!important;box-shadow:0 0 0 2px rgba(255,212,41,.55),0 8px 25px rgba(0,0,0,.3)!important}
+    #home .b4.bp-clicked{transform:none!important}
+  `;document.head.appendChild(style);
+  for(const node of document.querySelectorAll('script')){if(node.textContent.includes('delayedOrbit')&&node.textContent.includes('},300)'))node.textContent=node.textContent.replace('},300)', '},140)')}
+})();
+</script></body></html>
